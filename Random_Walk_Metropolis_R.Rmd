@@ -1,0 +1,98 @@
+```{r}
+probabilityDensityFunction <- function(x) {
+  return(0.5 * exp(-abs(x)))
+}
+
+RandomWalkMetropolis <- function(N, S, pdf_function=probabilityDensityFunction) {
+  cat("N:", N, "\n")
+  cat("S:", S, "\n")
+
+  generatedSamples <- numeric(N)
+  
+  if (N > 0 && S > 0) {
+    generatedSamples[1] <- as.numeric(runif(1))  # Ensure numeric type
+    
+    for (i in 2:N) {
+      X_star <- rnorm(1, mean=generatedSamples[i-1], sd=S)
+      random_Number <- runif(1)
+      log_Ratio <- log(pdf_function(X_star)) - log(pdf_function(generatedSamples[i-1]))
+      
+      if (log(random_Number) < log_Ratio) {
+        generatedSamples[i] <- X_star
+      } else {
+        generatedSamples[i] <- generatedSamples[i-1]
+      }
+    }
+    print(generatedSamples)
+    return(as.numeric(generatedSamples))
+  } else {
+    print("Invalid input parameters")
+  }
+  
+  return(NULL)
+}
+
+test <- RandomWalkMetropolis(10000, 1.0)
+
+hist(test, col="blue", main="Histogram and Kernel Density Plot", xlab="Value", freq=FALSE)
+lines(density(test), col="red")
+
+sample_mean <- mean(test)
+sample_std <- sd(test)
+
+print(paste("Sample mean =", sample_mean))
+print(paste("Standard deviation =", sample_std))
+
+generateChains <- function(num_chains, N, S) {
+  chains <- list()
+  
+  for (i in 1:num_chains) {
+    chain <- RandomWalkMetropolis(N, S)
+    
+    if (!is.null(chain)) {
+      chains[[i]] <- chain
+    }
+  }
+  
+  return(chains)
+}
+
+calculate_R_hat <- function(chains) {
+  M_j <- sapply(chains, mean)
+  M <- mean(M_j)
+  V_j <- sapply(chains, function(x) mean((x - mean(x)) ^ 2))
+  W <- mean(V_j)
+  B <- mean((M_j - M) ^ 2)
+  R_hat <- sqrt((B + W) / W)
+  
+  return(R_hat)
+}
+
+test2 <- generateChains(2, 3, 1.0)
+print(test2)
+score <- calculate_R_hat(test2)
+print(score)
+
+final_test <- generateChains(4, 2000, 0.001)
+print(final_test)
+final_score <- calculate_R_hat(final_test)
+print(final_score)
+
+N <- 2000
+J <- 4
+s_values <- seq(0.001, 1, length.out=100)
+R_hat_values <- numeric(length(s_values))
+
+for (i in 1:length(s_values)) {
+  chains <- generateChains(J, N, s_values[i])
+  R_hat_values[i] <- calculate_R_hat(chains)
+}
+
+plot(s_values, R_hat_values, type="l", xlab="s values", ylab="R_hat values", main="R_hat values over a grid of s values")
+grid()
+
+
+
+```
+
+
